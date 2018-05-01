@@ -14,14 +14,9 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.kodcu.util.Constants.*;
 @Slf4j
 public class VerticleRestServer extends AbstractVerticle {
-
-    private static final String DB_URI = "mongodb://localhost:27017";
-    private static final String DB_NAME = "vertx";
-    private static final String COLLECTION_NAME = "articles";
-    private static final int HTTP_PORT = 8080;
-    private static final int HTTP_STATUS_CODE_OK = 200;
 
     private MongoClient mongoClient;
 
@@ -68,13 +63,11 @@ public class VerticleRestServer extends AbstractVerticle {
      * @param routingContext
      */
     private void getArticles(RoutingContext routingContext) {
-        mongoClient.find(COLLECTION_NAME, new JsonObject(), res -> {
-            routingContext.response()
-                    .putHeader("content-type", "application/json")
+        mongoClient.find(COLLECTION_NAME, new JsonObject(), res ->
+                routingContext.response()
+                    .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
                     .setStatusCode(HTTP_STATUS_CODE_OK)
-                    .end(Json.encodePrettily(res.result()));
-        });
-
+                    .end(Json.encodePrettily(res.result())));
     }
 
     /**
@@ -84,13 +77,11 @@ public class VerticleRestServer extends AbstractVerticle {
     private void getOneArticle(RoutingContext routingContext) {
         String id = routingContext.request().getParam("id");
 
-        mongoClient.find(COLLECTION_NAME, new JsonObject().put("id", id), res -> {
-            routingContext.response()
-                    .putHeader("content-type", "application/json")
+        mongoClient.find(COLLECTION_NAME, new JsonObject().put("id", id), res ->
+                routingContext.response()
+                    .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
                     .setStatusCode(HTTP_STATUS_CODE_OK)
-                    .end(Json.encodePrettily(res.result()));
-        });
-
+                    .end(Json.encodePrettily(res.result())));
     }
 
     /**
@@ -108,7 +99,7 @@ public class VerticleRestServer extends AbstractVerticle {
         mongoClient.save(COLLECTION_NAME, article, id -> log.debug("Inserted id: {} ", id.result()));
 
         routingContext.response()
-                .putHeader("content-type", "application/json")
+                .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
                 .setStatusCode(HTTP_STATUS_CODE_OK)
                 .end("recorded...");
     }
@@ -125,12 +116,12 @@ public class VerticleRestServer extends AbstractVerticle {
         mongoClient.removeDocument(COLLECTION_NAME, query, res -> {
             if (res.succeeded()) {
                 routingContext.response()
-                        .putHeader("content-type", "application/json")
+                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
                         .setStatusCode(HTTP_STATUS_CODE_OK)
                         .end("The document was deleted...");
             } else {
                 routingContext.response()
-                        .putHeader("content-type", "application/json")
+                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
                         .setStatusCode(HTTP_STATUS_CODE_OK)
                         .end("Opps. " + res.cause());
             }

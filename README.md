@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/hakdogan/Vert.x.svg?branch=master)](https://travis-ci.org/hakdogan/Vert.x)
+[![Coverage Status](https://coveralls.io/repos/github/hakdogan/Vert.x/badge.svg?branch=master)](https://coveralls.io/github/hakdogan/Vert.x?branch=master)
+
 # Vert.x
 This repository shows how to use the Vertx Mongo client with the RESTful Web Service.
 
