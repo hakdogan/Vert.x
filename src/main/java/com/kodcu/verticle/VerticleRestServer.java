@@ -15,6 +15,7 @@ import io.vertx.ext.web.RoutingContext;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.kodcu.util.Constants.*;
+
 @Slf4j
 public class VerticleRestServer extends AbstractVerticle {
 
@@ -24,24 +25,15 @@ public class VerticleRestServer extends AbstractVerticle {
     public void start(Future<Void> future) {
 
         log.info("Welcome to Vertx");
-
-        Router router = Router.router(vertx);
-        router.get("/api/articles/article/:id").handler(this::getOneArticle);
-        router.get("/api/articles").handler(this::getArticles);
-        router.get("/api/articles/save/:id/:title/:content/:author").handler(this::saveDocument);
-        router.get("/api/articles/remove/:id").handler(this::removeDocument);
-
-        vertx.createHttpServer()
-                .requestHandler(router::accept)
-                .listen(config().getInteger("http.port", HTTP_PORT), result -> {
-                    if (result.succeeded()) {
-                        future.complete();
-                    } else {
-                        future.fail(result.cause());
-                    }
-                });
-
-        prepareMongoDB();
+        createServer().setHandler(ar -> {
+            if(ar.succeeded()){
+                prepareMongoDB();
+                future.complete();
+            } else {
+                log.error("Application failed to start {} ", ar.cause());
+                future.fail(ar.cause());
+            }
+        });
     }
 
     @Override
@@ -51,11 +43,39 @@ public class VerticleRestServer extends AbstractVerticle {
 
     private void prepareMongoDB(){
 
-        JsonObject mongoconfig = new JsonObject()
+        JsonObject mongoConfig = new JsonObject()
                 .put("connection_string", DB_URI)
                 .put("db_name", DB_NAME);
 
-        mongoClient = MongoClient.createShared(vertx, mongoconfig);
+        mongoClient = MongoClient.createShared(vertx, mongoConfig);
+    }
+
+    /**
+     *
+     * @return
+     */
+    private Future<Void> createServer(){
+
+        Future<Void> future = Future.future();
+
+        Router router = Router.router(vertx);
+        router.get("/api/articles/article/:id").handler(this::getOneArticle);
+        router.get("/api/articles").handler(this::getArticles);
+        router.get("/api/articles/save/:id/:title/:content/:author").handler(this::saveDocument);
+        router.get("/api/articles/remove/:id").handler(this::removeDocument);
+
+        vertx.createHttpServer().requestHandler(router::accept)
+                .listen(config().getInteger("http.port", HTTP_PORT), result -> {
+                    if (result.succeeded()) {
+                        log.info("HTTP server running on port 8080");
+                        future.complete();
+                    } else {
+                        log.error("Could not start a HTTP server", result.cause());
+                        future.fail(result.cause());
+                    }
+                });
+
+        return future;
     }
 
     /**
