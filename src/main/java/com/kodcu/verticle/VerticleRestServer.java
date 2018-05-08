@@ -43,7 +43,7 @@ public class VerticleRestServer extends AbstractVerticle {
 
     private void prepareMongoDB(){
 
-        JsonObject mongoConfig = new JsonObject()
+        final JsonObject mongoConfig = new JsonObject()
                 .put("connection_string", DB_URI)
                 .put("db_name", DB_NAME);
 
@@ -56,18 +56,19 @@ public class VerticleRestServer extends AbstractVerticle {
      */
     private Future<Void> createServer(){
 
-        Future<Void> future = Future.future();
+        final Future<Void> future = Future.future();
+        final Router router = Router.router(vertx);
 
-        Router router = Router.router(vertx);
-        router.get("/api/articles/article/:id").handler(this::getOneArticle);
         router.get("/api/articles").handler(this::getArticles);
+        router.get("/api/articles/article/:id").handler(this::getOneArticle);
         router.get("/api/articles/save/:id/:title/:content/:author").handler(this::saveDocument);
         router.get("/api/articles/remove/:id").handler(this::removeDocument);
+        router.get("/api/collection/drop/:name").handler(this::dropCollection);
 
         vertx.createHttpServer().requestHandler(router::accept)
-                .listen(config().getInteger("http.port", HTTP_PORT), result -> {
+                .listen(config().getInteger("http.server.port", HTTP_PORT), result -> {
                     if (result.succeeded()) {
-                        log.info("HTTP server running on port 8080");
+                        log.info("HTTP server running on port " + HTTP_PORT);
                         future.complete();
                     } else {
                         log.error("Could not start a HTTP server", result.cause());
@@ -95,8 +96,7 @@ public class VerticleRestServer extends AbstractVerticle {
      * @param routingContext
      */
     private void getOneArticle(RoutingContext routingContext) {
-        String id = routingContext.request().getParam("id");
-
+        final String id = routingContext.request().getParam("id");
         mongoClient.find(COLLECTION_NAME, new JsonObject().put("id", id), res ->
                 routingContext.response()
                     .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
@@ -110,12 +110,12 @@ public class VerticleRestServer extends AbstractVerticle {
      */
     private void saveDocument(RoutingContext routingContext){
 
-        String documentId = routingContext.request().getParam("id");
-        String title = routingContext.request().getParam("title");
-        String content = routingContext.request().getParam("content");
-        String author = routingContext.request().getParam("author");
+        final String documentId = routingContext.request().getParam("id");
+        final String title = routingContext.request().getParam("title");
+        final String content = routingContext.request().getParam("content");
+        final String author = routingContext.request().getParam("author");
 
-        JsonObject article = new JsonObject().put("id", documentId).put(title, title).put("content", content).put("author", author);
+        final JsonObject article = new JsonObject().put("id", documentId).put(title, title).put("content", content).put("author", author);
         mongoClient.save(COLLECTION_NAME, article, id -> log.debug("Inserted id: {} ", id.result()));
 
         routingContext.response()
@@ -130,11 +130,11 @@ public class VerticleRestServer extends AbstractVerticle {
      */
     private void removeDocument(RoutingContext routingContext) {
 
-        String documentId = routingContext.request().getParam("id");
-        JsonObject query = new JsonObject().put("id", documentId);
+        final String documentId = routingContext.request().getParam("id");
+        final JsonObject query = new JsonObject().put("id", documentId);
 
-        mongoClient.removeDocument(COLLECTION_NAME, query, res -> {
-            if (res.succeeded()) {
+        mongoClient.removeDocument(COLLECTION_NAME, query, req -> {
+            if (req.succeeded()) {
                 routingContext.response()
                         .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
                         .setStatusCode(HTTP_STATUS_CODE_OK)
@@ -143,7 +143,30 @@ public class VerticleRestServer extends AbstractVerticle {
                 routingContext.response()
                         .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
                         .setStatusCode(HTTP_STATUS_CODE_OK)
-                        .end("Opps. " + res.cause());
+                        .end("Opps. " + req.cause());
+            }
+        });
+    }
+
+    /**
+     *
+     * @param routingContext
+     */
+    private void dropCollection(RoutingContext routingContext) {
+
+        final String collectinName = routingContext.request().getParam("name");
+
+        mongoClient.dropCollection(collectinName, req -> {
+            if(req.succeeded()){
+                routingContext.response()
+                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
+                        .setStatusCode(HTTP_STATUS_CODE_OK)
+                        .end("The collection was dropped...");
+            } else {
+                routingContext.response()
+                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
+                        .setStatusCode(HTTP_STATUS_CODE_OK)
+                        .end("Opps. " + req.cause());
             }
         });
     }

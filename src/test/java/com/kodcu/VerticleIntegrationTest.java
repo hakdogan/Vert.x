@@ -4,6 +4,7 @@ package com.kodcu;
  * Created by hakdogan on 28.04.2018
  */
 
+import com.kodcu.util.Constants;
 import com.kodcu.verticle.VerticleRestServer;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
@@ -11,11 +12,19 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.MethodSorters;
 
 @RunWith(VertxUnitRunner.class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class VerticleIntegrationTest {
+
+    private final String DOCUMENT_ID = "1";
+    private final String DOCUMENT_TITLE = "title";
+    private final String DOCUMENT_CONTENT = "content";
+    private final String DOCUMENT_AUTHOR = "hakdogan";
 
     private Vertx vertx;
 
@@ -31,9 +40,22 @@ public class VerticleIntegrationTest {
     }
 
     @Test
-    public void saveDocument(TestContext testContext) {
+    public void testA(TestContext testContext) {
         Async async = testContext.async();
-        vertx.createHttpClient().getNow(8080, "localhost", "/api/articles/save/1/title/content/author",
+        vertx.createHttpClient().getNow(8080, "localhost", "/api/collection/drop/" + Constants.COLLECTION_NAME,
+                response -> {
+                    response.handler(responseBody -> {
+                        testContext.assertTrue(responseBody.toString().contains("dropped"));
+                        async.complete();
+                    });
+                });
+    }
+
+    @Test
+    public void testB(TestContext testContext) {
+        Async async = testContext.async();
+        String url = String.join("/", DOCUMENT_ID, DOCUMENT_TITLE, DOCUMENT_CONTENT, DOCUMENT_AUTHOR);
+        vertx.createHttpClient().getNow(8080, "localhost", "/api/articles/save/" + url,
                 response -> {
                     response.handler(responseBody -> {
                     testContext.assertTrue(responseBody.toString().contains("recorded..."));
@@ -43,10 +65,22 @@ public class VerticleIntegrationTest {
     }
 
     @Test
+    public void testC(TestContext testContext) {
+        Async async = testContext.async();
+        vertx.createHttpClient().getNow(8080, "localhost", "/api/articles/article/" + DOCUMENT_ID,
+                response -> {
+                    response.handler(responseBody -> {
+                        testContext.assertTrue(responseBody.toString().contains("title"));
+                        async.complete();
+                    });
+                });
+    }
+
+    @Test
     public void removeDocument(TestContext testContext) {
         Async async = testContext.async();
         vertx.createHttpClient()
-                .getNow(8080, "localhost", "/api/articles/remove/1",
+                .getNow(8080, "localhost", "/api/articles/remove/" + DOCUMENT_ID,
                     response -> {
                         response.handler(responseBody -> {
                                 testContext.assertTrue(responseBody.toString().contains("deleted"));

@@ -3,29 +3,36 @@
 [![Coverage Status](https://coveralls.io/repos/github/hakdogan/Vert.x/badge.svg?branch=master)](https://coveralls.io/github/hakdogan/Vert.x?branch=master)
 
 # Vert.x
-This repository shows how to use the Vertx Mongo client with the RESTful Web Service.
+This repository shows how to use the Vert.x Mongo client with the RESTful Web Service.
 
 ## How it's run?
 ```
 sh run.sh
 ```
 
-## For save a document
+#How to perform CRUD operations?
+
+## Save a document
 ```
 http://localhost:8080/api/articles/save/{id}/{title}/{content}/{author}
 ```
 
-## For get a document
+## Get a document
 ```
 http://localhost:8080/api/articles/article/{id}
 ```
 
-## For get all documents
+## Get all documents
 ```
 http://localhost:8080/api/articles
 ```
 
-## For remove a document
+## Remove a document
 ```
 http://localhost:8080/api/articles/remove/{id}
+```
+
+## Drop a collection
+```
+http://localhost:8080/api/collection/drop/{name}
 ```
