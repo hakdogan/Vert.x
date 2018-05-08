@@ -10,29 +10,29 @@ This repository shows how to use the Vert.x Mongo client with the RESTful Web Se
 sh run.sh
 ```
 
-#How to perform CRUD operations?
+## How to perform CRUD operations?
 
-## Save a document
+### Save a document
 ```
 http://localhost:8080/api/articles/save/{id}/{title}/{content}/{author}
 ```
 
-## Get a document
+### Get a document
 ```
 http://localhost:8080/api/articles/article/{id}
 ```
 
-## Get all documents
+### Get all documents
 ```
 http://localhost:8080/api/articles
 ```
 
-## Remove a document
+### Remove a document
 ```
 http://localhost:8080/api/articles/remove/{id}
 ```
 
-## Drop a collection
+### Drop a collection
 ```
 http://localhost:8080/api/collection/drop/{name}
 ```
