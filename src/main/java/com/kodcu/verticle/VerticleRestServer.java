@@ -25,9 +25,9 @@ public class VerticleRestServer extends AbstractVerticle {
     public void start(Future<Void> future) {
 
         log.info("Welcome to Vertx");
-        createServer().setHandler(ar -> {
-            if(ar.succeeded()){
-                prepareMongoDB();
+        Future<Void> steps = prepareMongoDB().compose(ar -> createServer());
+        steps.setHandler(ar -> {
+            if (ar.succeeded()) {
                 future.complete();
             } else {
                 log.error("Application failed to start {} ", ar.cause());
@@ -41,13 +41,23 @@ public class VerticleRestServer extends AbstractVerticle {
         log.info("Shutting down application");
     }
 
-    private void prepareMongoDB(){
+    private Future<Void> prepareMongoDB(){
 
+        Future<Void> future = Future.future();
         final JsonObject mongoConfig = new JsonObject()
                 .put("connection_string", DB_URI)
                 .put("db_name", DB_NAME);
 
         mongoClient = MongoClient.createShared(vertx, mongoConfig);
+        mongoClient.getCollections(ar -> {
+            if(ar.succeeded()){
+                future.complete();
+            } else {
+                future.fail(ar.cause());
+            }
+        });
+
+        return future;
     }
 
     /**
@@ -84,11 +94,19 @@ public class VerticleRestServer extends AbstractVerticle {
      * @param routingContext
      */
     private void getArticles(RoutingContext routingContext) {
-        mongoClient.find(COLLECTION_NAME, new JsonObject(), res ->
-                routingContext.response()
-                    .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
-                    .setStatusCode(HTTP_STATUS_CODE_OK)
-                    .end(Json.encodePrettily(res.result())));
+
+        mongoClient.find(COLLECTION_NAME, new JsonObject(), req -> {
+            String result = "";
+            int statusCode = HTTP_STATUS_CODE_OK;
+
+            if(req.succeeded()) {
+                result = req.result().isEmpty()?"No documents found":Json.encodePrettily(req.result());
+            } else {
+                result = ERROR_MESSAGE + req.cause();
+                statusCode = INTERNEL_SERVER_ERROR_CODE;
+            }
+            responseHandle(routingContext, statusCode, result);
+        });
     }
 
     /**
@@ -96,12 +114,20 @@ public class VerticleRestServer extends AbstractVerticle {
      * @param routingContext
      */
     private void getOneArticle(RoutingContext routingContext) {
+
         final String id = routingContext.request().getParam("id");
-        mongoClient.find(COLLECTION_NAME, new JsonObject().put("id", id), res ->
-                routingContext.response()
-                    .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
-                    .setStatusCode(HTTP_STATUS_CODE_OK)
-                    .end(Json.encodePrettily(res.result())));
+        mongoClient.find(COLLECTION_NAME, new JsonObject().put("id", id), req -> {
+            String result = "";
+            int statusCode = HTTP_STATUS_CODE_OK;
+
+            if(req.succeeded()){
+                result = req.result().isEmpty()?"Document not found":Json.encodePrettily(req.result());
+            } else {
+                result = ERROR_MESSAGE + req.cause();
+                statusCode = INTERNEL_SERVER_ERROR_CODE;
+            }
+            responseHandle(routingContext, statusCode, result);
+        });
     }
 
     /**
@@ -114,14 +140,22 @@ public class VerticleRestServer extends AbstractVerticle {
         final String title = routingContext.request().getParam("title");
         final String content = routingContext.request().getParam("content");
         final String author = routingContext.request().getParam("author");
-
         final JsonObject article = new JsonObject().put("id", documentId).put(title, title).put("content", content).put("author", author);
-        mongoClient.save(COLLECTION_NAME, article, id -> log.debug("Inserted id: {} ", id.result()));
 
-        routingContext.response()
-                .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
-                .setStatusCode(HTTP_STATUS_CODE_OK)
-                .end("recorded...");
+        mongoClient.save(COLLECTION_NAME, article, req -> {
+            String result = "";
+            int statusCode = HTTP_STATUS_CODE_OK;
+
+            if(req.succeeded()){
+               result = req.result().isEmpty()?"Document could not be inserted":Json.encodePrettily("Inserted doc id: " + req.result());
+            } else {
+                result = ERROR_MESSAGE + req.cause();
+                statusCode = INTERNEL_SERVER_ERROR_CODE;
+            }
+
+            log.debug(result);
+            responseHandle(routingContext, statusCode, result);
+        });
     }
 
     /**
@@ -133,18 +167,17 @@ public class VerticleRestServer extends AbstractVerticle {
         final String documentId = routingContext.request().getParam("id");
         final JsonObject query = new JsonObject().put("id", documentId);
 
-        mongoClient.removeDocument(COLLECTION_NAME, query, req -> {
+        mongoClient.removeDocuments(COLLECTION_NAME, query, req -> {
+            String result = "";
+            int statusCode = HTTP_STATUS_CODE_OK;
+
             if (req.succeeded()) {
-                routingContext.response()
-                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
-                        .setStatusCode(HTTP_STATUS_CODE_OK)
-                        .end("The document was deleted...");
+                result = req.result().getRemovedCount() > 0?req.result().getRemovedCount() + " document was deleted":"No document was deleted";
             } else {
-                routingContext.response()
-                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
-                        .setStatusCode(HTTP_STATUS_CODE_OK)
-                        .end("Opps. " + req.cause());
+                result = ERROR_MESSAGE + req.cause();
+                statusCode = INTERNEL_SERVER_ERROR_CODE;
             }
+            responseHandle(routingContext, statusCode, result);
         });
     }
 
@@ -155,20 +188,28 @@ public class VerticleRestServer extends AbstractVerticle {
     private void dropCollection(RoutingContext routingContext) {
 
         final String collectinName = routingContext.request().getParam("name");
-
         mongoClient.dropCollection(collectinName, req -> {
-            if(req.succeeded()){
-                routingContext.response()
-                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
-                        .setStatusCode(HTTP_STATUS_CODE_OK)
-                        .end("The collection was dropped...");
-            } else {
-                routingContext.response()
-                        .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
-                        .setStatusCode(HTTP_STATUS_CODE_OK)
-                        .end("Opps. " + req.cause());
+
+            String result = "The collection was dropped...";
+            int statusCode = HTTP_STATUS_CODE_OK;
+
+            if(req.failed()){
+                result = ERROR_MESSAGE + req.cause();
+                statusCode = INTERNEL_SERVER_ERROR_CODE;
             }
+            responseHandle(routingContext, statusCode, result);
         });
+    }
+
+    /**
+     *
+     * @param routingContext
+     */
+    private void responseHandle(RoutingContext routingContext, int statusCode, String result){
+        routingContext.response()
+                .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
+                .setStatusCode(statusCode)
+                .end(result);
     }
 
 }

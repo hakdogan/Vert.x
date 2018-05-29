@@ -10,10 +10,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 
@@ -58,7 +55,7 @@ public class VerticleIntegrationTest {
         vertx.createHttpClient().getNow(8080, "localhost", "/api/articles/save/" + url,
                 response -> {
                     response.handler(responseBody -> {
-                    testContext.assertTrue(responseBody.toString().contains("recorded..."));
+                    testContext.assertTrue(responseBody.toString().contains("Inserted"));
                     async.complete();
                  });
         });

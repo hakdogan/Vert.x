@@ -11,8 +11,10 @@ public class Constants {
     public static final String COLLECTION_NAME = "articles";
     public static final String CONTENT_TYPE = "content-type";
     public static final String PRODUCER_TYPE = "application/json";
+    public static final String ERROR_MESSAGE = "Internal server error: ";
     public static final int HTTP_PORT = 8080;
     public static final int HTTP_STATUS_CODE_OK = 200;
+    public static final int INTERNEL_SERVER_ERROR_CODE = 500;
 
     private Constants(){}
 }
