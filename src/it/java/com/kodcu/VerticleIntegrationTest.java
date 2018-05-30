@@ -37,6 +37,18 @@ public class VerticleIntegrationTest {
     }
 
     @Test
+    public void welcomePageTest(TestContext testContext) {
+        Async async = testContext.async();
+        vertx.createHttpClient().getNow(8080, "localhost", "/",
+                response -> {
+                    response.handler(responseBody -> {
+                        testContext.assertTrue(responseBody.toString().contains("Welcome"));
+                        async.complete();
+                    });
+                });
+    }
+
+    @Test
     public void testA(TestContext testContext) {
         Async async = testContext.async();
         vertx.createHttpClient().getNow(8080, "localhost", "/api/collection/drop/" + Constants.COLLECTION_NAME,

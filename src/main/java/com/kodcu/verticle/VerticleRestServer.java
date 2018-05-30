@@ -12,6 +12,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.templ.FreeMarkerTemplateEngine;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.kodcu.util.Constants.*;
@@ -20,6 +21,7 @@ import static com.kodcu.util.Constants.*;
 public class VerticleRestServer extends AbstractVerticle {
 
     private MongoClient mongoClient;
+    private final FreeMarkerTemplateEngine templateEngine = FreeMarkerTemplateEngine.create();
 
     @Override
     public void start(Future<Void> future) {
@@ -69,6 +71,7 @@ public class VerticleRestServer extends AbstractVerticle {
         final Future<Void> future = Future.future();
         final Router router = Router.router(vertx);
 
+        router.get("/").handler(this::welcomePage);
         router.get("/api/articles").handler(this::getArticles);
         router.get("/api/articles/article/:id").handler(this::getOneArticle);
         router.get("/api/articles/save/:id/:title/:content/:author").handler(this::saveDocument);
@@ -89,6 +92,22 @@ public class VerticleRestServer extends AbstractVerticle {
         return future;
     }
 
+    /**
+     *
+     * @param routingContext
+     */
+    private void welcomePage(RoutingContext routingContext){
+        routingContext.put("title", "Simple tutorial about Vert.x");
+        routingContext.put("h1", "Welcome the Vert.x tutorial");
+        templateEngine.render(routingContext, "template", "/index.ftl", ar -> {
+            if (ar.succeeded()) {
+                routingContext.response().putHeader("Content-Type", "text/html");
+                routingContext.response().end(ar.result());
+            } else {
+                routingContext.fail(ar.cause());
+            }
+        });
+    }
     /**
      *
      * @param routingContext
