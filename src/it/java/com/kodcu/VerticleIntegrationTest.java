@@ -7,9 +7,11 @@ package com.kodcu;
 import com.kodcu.util.Constants;
 import com.kodcu.verticle.VerticleRestServer;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.client.WebClient;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -18,12 +20,10 @@ import org.junit.runners.MethodSorters;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class VerticleIntegrationTest {
 
-    private final String DOCUMENT_ID = "1";
-    private final String DOCUMENT_TITLE = "title";
-    private final String DOCUMENT_CONTENT = "content";
-    private final String DOCUMENT_AUTHOR = "hakdogan";
-
     private Vertx vertx;
+    private static String DOC_ID;
+    private static final int HTTP_PORT = 8080;
+    private static final String HOSTNAME = "localhost";
 
     @Before
     public void setup(TestContext testContext) {
@@ -39,10 +39,10 @@ public class VerticleIntegrationTest {
     @Test
     public void welcomePageTest(TestContext testContext) {
         Async async = testContext.async();
-        vertx.createHttpClient().getNow(8080, "localhost", "/",
+        vertx.createHttpClient().getNow(HTTP_PORT, HOSTNAME, "/",
                 response -> {
                     response.handler(responseBody -> {
-                        testContext.assertTrue(responseBody.toString().contains("Welcome"));
+                        testContext.assertTrue(responseBody.toString().contains("Vert.x"));
                         async.complete();
                     });
                 });
@@ -51,7 +51,7 @@ public class VerticleIntegrationTest {
     @Test
     public void testA(TestContext testContext) {
         Async async = testContext.async();
-        vertx.createHttpClient().getNow(8080, "localhost", "/api/collection/drop/" + Constants.COLLECTION_NAME,
+        vertx.createHttpClient().getNow(HTTP_PORT, HOSTNAME, "/api/collection/drop/" + Constants.COLLECTION_NAME,
                 response -> {
                     response.handler(responseBody -> {
                         testContext.assertTrue(responseBody.toString().contains("dropped"));
@@ -63,20 +63,27 @@ public class VerticleIntegrationTest {
     @Test
     public void testB(TestContext testContext) {
         Async async = testContext.async();
-        String url = String.join("/", DOCUMENT_ID, DOCUMENT_TITLE, DOCUMENT_CONTENT, DOCUMENT_AUTHOR);
-        vertx.createHttpClient().getNow(8080, "localhost", "/api/articles/save/" + url,
-                response -> {
-                    response.handler(responseBody -> {
-                    testContext.assertTrue(responseBody.toString().contains("Inserted"));
-                    async.complete();
-                 });
-        });
+        WebClient client = WebClient.create(vertx);
+
+        client.post(HTTP_PORT, HOSTNAME, "/api/articles/save")
+                .sendJsonObject(new JsonObject()
+                        .put("title", "test title")
+                        .put("content", "test content")
+                        .put("author", "test author"), req -> {
+                    if (req.succeeded()) {
+                        DOC_ID = req.result().bodyAsString().substring(req.result().bodyAsString().indexOf(":") + 2)
+                                .replace("\"", "").trim();
+                        testContext.assertTrue(req.result().bodyAsString().contains("Inserted doc"));
+                        async.complete();
+                    }
+                });
     }
+
 
     @Test
     public void testC(TestContext testContext) {
         Async async = testContext.async();
-        vertx.createHttpClient().getNow(8080, "localhost", "/api/articles/article/" + DOCUMENT_ID,
+        vertx.createHttpClient().getNow(HTTP_PORT, HOSTNAME, "/api/articles",
                 response -> {
                     response.handler(responseBody -> {
                         testContext.assertTrue(responseBody.toString().contains("title"));
@@ -85,16 +92,20 @@ public class VerticleIntegrationTest {
                 });
     }
 
+
     @Test
     public void removeDocument(TestContext testContext) {
         Async async = testContext.async();
-        vertx.createHttpClient()
-                .getNow(8080, "localhost", "/api/articles/remove/" + DOCUMENT_ID,
-                    response -> {
-                        response.handler(responseBody -> {
-                                testContext.assertTrue(responseBody.toString().contains("deleted"));
-                                async.complete();
-                        });
-                    });
+        WebClient client = WebClient.create(vertx);
+
+        client.post(HTTP_PORT, HOSTNAME, "/api/articles/remove")
+                .sendJsonObject(new JsonObject()
+                        .put("id", DOC_ID), req -> {
+                    if (req.succeeded()) {
+                        testContext.assertTrue(req.result().bodyAsString().contains("document was deleted"));
+                        async.complete();
+                    }
+                });
     }
+
 }

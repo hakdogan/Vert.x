@@ -5,6 +5,7 @@ package com.kodcu.verticle;
  * Created by hakdogan on 28.04.2018
  */
 
+import com.kodcu.util.Constants;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
@@ -12,6 +13,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.templ.FreeMarkerTemplateEngine;
 import lombok.extern.slf4j.Slf4j;
 
@@ -71,11 +73,13 @@ public class VerticleRestServer extends AbstractVerticle {
         final Future<Void> future = Future.future();
         final Router router = Router.router(vertx);
 
+        router.route("/*").handler(BodyHandler.create());
         router.get("/").handler(this::welcomePage);
         router.get("/api/articles").handler(this::getArticles);
-        router.get("/api/articles/article/:id").handler(this::getOneArticle);
-        router.get("/api/articles/save/:id/:title/:content/:author").handler(this::saveDocument);
-        router.get("/api/articles/remove/:id").handler(this::removeDocument);
+        router.get("/api/articles/save").handler(this::getSavePage);
+        router.post("/api/articles/save").handler(this::saveDocument);
+        router.get("/api/articles/remove").handler(this::getDeletePage);
+        router.post("/api/articles/remove").handler(this::removeDocument);
         router.get("/api/collection/drop/:name").handler(this::dropCollection);
 
         vertx.createHttpServer().requestHandler(router::accept)
@@ -97,23 +101,15 @@ public class VerticleRestServer extends AbstractVerticle {
      * @param routingContext
      */
     private void welcomePage(RoutingContext routingContext){
-        routingContext.put("title", "Simple tutorial about Vert.x");
         routingContext.put("h1", "Welcome the Vert.x tutorial");
-        templateEngine.render(routingContext, "template", "/index.ftl", ar -> {
-            if (ar.succeeded()) {
-                routingContext.response().putHeader("Content-Type", "text/html");
-                routingContext.response().end(ar.result());
-            } else {
-                routingContext.fail(ar.cause());
-            }
-        });
+        pageRender(routingContext, "/index.ftl", "homeActive", HTML_PRODUCE, HTTP_STATUS_CODE_OK);
     }
+
     /**
      *
      * @param routingContext
      */
     private void getArticles(RoutingContext routingContext) {
-
         mongoClient.find(COLLECTION_NAME, new JsonObject(), req -> {
             String result = "";
             int statusCode = HTTP_STATUS_CODE_OK;
@@ -124,7 +120,8 @@ public class VerticleRestServer extends AbstractVerticle {
                 result = ERROR_MESSAGE + req.cause();
                 statusCode = INTERNEL_SERVER_ERROR_CODE;
             }
-            responseHandle(routingContext, statusCode, result);
+            routingContext.put("articles", result);
+            pageRender(routingContext, "/list.ftl", "allArticlesActive", HTML_PRODUCE, statusCode);
         });
     }
 
@@ -132,21 +129,8 @@ public class VerticleRestServer extends AbstractVerticle {
      *
      * @param routingContext
      */
-    private void getOneArticle(RoutingContext routingContext) {
-
-        final String id = routingContext.request().getParam("id");
-        mongoClient.find(COLLECTION_NAME, new JsonObject().put("id", id), req -> {
-            String result = "";
-            int statusCode = HTTP_STATUS_CODE_OK;
-
-            if(req.succeeded()){
-                result = req.result().isEmpty()?"Document not found":Json.encodePrettily(req.result());
-            } else {
-                result = ERROR_MESSAGE + req.cause();
-                statusCode = INTERNEL_SERVER_ERROR_CODE;
-            }
-            responseHandle(routingContext, statusCode, result);
-        });
+    private void getSavePage(RoutingContext routingContext){
+        pageRender(routingContext, "/save.ftl", "saveArticleActive", HTML_PRODUCE, HTTP_STATUS_CODE_OK);
     }
 
     /**
@@ -155,24 +139,17 @@ public class VerticleRestServer extends AbstractVerticle {
      */
     private void saveDocument(RoutingContext routingContext){
 
-        final String documentId = routingContext.request().getParam("id");
-        final String title = routingContext.request().getParam("title");
-        final String content = routingContext.request().getParam("content");
-        final String author = routingContext.request().getParam("author");
-        final JsonObject article = new JsonObject().put("id", documentId).put(title, title).put("content", content).put("author", author);
-
-        mongoClient.save(COLLECTION_NAME, article, req -> {
+        mongoClient.save(COLLECTION_NAME, routingContext.getBodyAsJson(), req -> {
             String result = "";
             int statusCode = HTTP_STATUS_CODE_OK;
 
             if(req.succeeded()){
-               result = req.result().isEmpty()?"Document could not be inserted":Json.encodePrettily("Inserted doc id: " + req.result());
+               result = req.result().isEmpty()?Json.encodePrettily("Document could not be inserted"):Json.encodePrettily("Inserted doc id: " + req.result());
             } else {
                 result = ERROR_MESSAGE + req.cause();
                 statusCode = INTERNEL_SERVER_ERROR_CODE;
             }
 
-            log.debug(result);
             responseHandle(routingContext, statusCode, result);
         });
     }
@@ -181,17 +158,24 @@ public class VerticleRestServer extends AbstractVerticle {
      *
      * @param routingContext
      */
+    private void getDeletePage(RoutingContext routingContext){
+        pageRender(routingContext, "/delete.ftl", "deleteArticleActive", HTML_PRODUCE, HTTP_STATUS_CODE_OK);
+    }
+
+    /**
+     *
+     * @param routingContext
+     */
     private void removeDocument(RoutingContext routingContext) {
 
-        final String documentId = routingContext.request().getParam("id");
-        final JsonObject query = new JsonObject().put("id", documentId);
-
-        mongoClient.removeDocuments(COLLECTION_NAME, query, req -> {
+        log.info(routingContext.getBodyAsJson().toString());
+        mongoClient.removeDocuments(COLLECTION_NAME, routingContext.getBodyAsJson(), req -> {
             String result = "";
             int statusCode = HTTP_STATUS_CODE_OK;
 
             if (req.succeeded()) {
-                result = req.result().getRemovedCount() > 0?req.result().getRemovedCount() + " document was deleted":"No document was deleted";
+                result = req.result().getRemovedCount() > 0?Json.encodePrettily(req.result().getRemovedCount() + " document was deleted")
+                        :Json.encodePrettily("No document was deleted");
             } else {
                 result = ERROR_MESSAGE + req.cause();
                 statusCode = INTERNEL_SERVER_ERROR_CODE;
@@ -223,12 +207,39 @@ public class VerticleRestServer extends AbstractVerticle {
     /**
      *
      * @param routingContext
+     * @param statusCode
+     * @param result
      */
     private void responseHandle(RoutingContext routingContext, int statusCode, String result){
         routingContext.response()
-                .putHeader(CONTENT_TYPE, PRODUCER_TYPE)
+                .putHeader(CONTENT_TYPE, JSON_PRODUCER)
                 .setStatusCode(statusCode)
                 .end(result);
+    }
+
+    /**
+     *
+     * @param routingContext
+     * @param url
+     * @param activePage
+     * @param produceType
+     * @param statusCode
+     */
+    private void pageRender(RoutingContext routingContext, String url, String activePage, String produceType, int statusCode){
+        Constants.getMenuItems().forEach(item -> {
+            String status = item.equals(activePage)?"active":"";
+            routingContext.put(item, status);
+        });
+
+        templateEngine.render(routingContext, TEMPLATES_DIRECTORY, url, page -> {
+            if (page.succeeded()) {
+                routingContext.response().putHeader(CONTENT_TYPE, produceType)
+                .setStatusCode(statusCode)
+                .end(page.result());
+            } else {
+                routingContext.fail(page.cause());
+            }
+        });
     }
 
 }
