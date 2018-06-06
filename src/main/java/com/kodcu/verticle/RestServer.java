@@ -9,7 +9,9 @@ import com.kodcu.util.Constants;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -20,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import static com.kodcu.util.Constants.*;
 
 @Slf4j
-public class VerticleRestServer extends AbstractVerticle {
+public class RestServer extends AbstractVerticle {
 
     private MongoClient mongoClient;
     private final FreeMarkerTemplateEngine templateEngine = FreeMarkerTemplateEngine.create();
@@ -78,7 +80,6 @@ public class VerticleRestServer extends AbstractVerticle {
         router.get("/api/articles").handler(this::getArticles);
         router.get("/api/articles/save").handler(this::getSavePage);
         router.post("/api/articles/save").handler(this::saveDocument);
-        router.get("/api/articles/remove").handler(this::getDeletePage);
         router.post("/api/articles/remove").handler(this::removeDocument);
         router.get("/api/collection/drop/:name").handler(this::dropCollection);
 
@@ -110,19 +111,22 @@ public class VerticleRestServer extends AbstractVerticle {
      * @param routingContext
      */
     private void getArticles(RoutingContext routingContext) {
-        mongoClient.find(COLLECTION_NAME, new JsonObject(), req -> {
-            String result = "";
-            int statusCode = HTTP_STATUS_CODE_OK;
+        JsonArray objects = new JsonArray();
+        ReadStream<JsonObject> stream = fetchArticles();
+        stream.exceptionHandler(throwable -> log.error("An exception was thrown in getArticles method. {} ", throwable.getMessage()))
+                .handler(objects::add)
+                .endHandler(v -> {
+                    routingContext.put("articles", objects.toString());
+                    pageRender(routingContext, "/list.ftl", "allArticlesActive", HTML_PRODUCE, HTTP_STATUS_CODE_OK);
+                });
+    }
 
-            if(req.succeeded()) {
-                result = req.result().isEmpty()?"No documents found":Json.encodePrettily(req.result());
-            } else {
-                result = ERROR_MESSAGE + req.cause();
-                statusCode = INTERNEL_SERVER_ERROR_CODE;
-            }
-            routingContext.put("articles", result);
-            pageRender(routingContext, "/list.ftl", "allArticlesActive", HTML_PRODUCE, statusCode);
-        });
+    /**
+     *
+     * @return
+     */
+    private ReadStream<JsonObject> fetchArticles(){
+        return mongoClient.findBatch(COLLECTION_NAME, new JsonObject());
     }
 
     /**
@@ -158,29 +162,19 @@ public class VerticleRestServer extends AbstractVerticle {
      *
      * @param routingContext
      */
-    private void getDeletePage(RoutingContext routingContext){
-        pageRender(routingContext, "/delete.ftl", "deleteArticleActive", HTML_PRODUCE, HTTP_STATUS_CODE_OK);
-    }
-
-    /**
-     *
-     * @param routingContext
-     */
     private void removeDocument(RoutingContext routingContext) {
 
-        log.info(routingContext.getBodyAsJson().toString());
         mongoClient.removeDocuments(COLLECTION_NAME, routingContext.getBodyAsJson(), req -> {
-            String result = "";
-            int statusCode = HTTP_STATUS_CODE_OK;
-
             if (req.succeeded()) {
-                result = req.result().getRemovedCount() > 0?Json.encodePrettily(req.result().getRemovedCount() + " document was deleted")
-                        :Json.encodePrettily("No document was deleted");
+                JsonArray objects = new JsonArray();
+                ReadStream<JsonObject> stream = fetchArticles();
+                stream.exceptionHandler(throwable -> log.error("An exception was thrown in removeDocument method. {} ", throwable.getMessage()))
+                        .handler(objects::add)
+                        .endHandler(v -> responseHandle(routingContext, HTTP_STATUS_CODE_OK, objects.toString()));
+
             } else {
-                result = ERROR_MESSAGE + req.cause();
-                statusCode = INTERNEL_SERVER_ERROR_CODE;
+                responseHandle(routingContext, INTERNEL_SERVER_ERROR_CODE, ERROR_MESSAGE + req.cause());
             }
-            responseHandle(routingContext, statusCode, result);
         });
     }
 

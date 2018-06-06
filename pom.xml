@@ -21,7 +21,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <main.verticle>com.kodcu.verticle.VerticleRestServer</main.verticle>
+        <main.verticle>com.kodcu.verticle.RestServer</main.verticle>
         <jar.name>hakdoganVerticle</jar.name>
         <vertx.version>3.5.1</vertx.version>
         <mongo.version>3.5.1</mongo.version>

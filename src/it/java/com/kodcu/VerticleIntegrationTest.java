@@ -5,7 +5,7 @@ package com.kodcu;
  */
 
 import com.kodcu.util.Constants;
-import com.kodcu.verticle.VerticleRestServer;
+import com.kodcu.verticle.RestServer;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -28,7 +28,7 @@ public class VerticleIntegrationTest {
     @Before
     public void setup(TestContext testContext) {
         vertx = Vertx.vertx();
-        vertx.deployVerticle(VerticleRestServer.class.getName(), testContext.asyncAssertSuccess());
+        vertx.deployVerticle(RestServer.class.getName(), testContext.asyncAssertSuccess());
     }
 
     @After
@@ -102,7 +102,7 @@ public class VerticleIntegrationTest {
                 .sendJsonObject(new JsonObject()
                         .put("id", DOC_ID), req -> {
                     if (req.succeeded()) {
-                        testContext.assertTrue(req.result().bodyAsString().contains("document was deleted"));
+                        testContext.assertFalse(req.result().bodyAsString().contains("Internal server error"));
                         async.complete();
                     }
                 });

@@ -70,7 +70,7 @@ templateEngine.render(routingContext, TEMPLATES_DIRECTORY, url, page -> {
 });
 ```
 
-### Using web client in tests
+### Using Web Client in tests
 ```java
 Async async = testContext.async();
 WebClient client = WebClient.create(vertx);

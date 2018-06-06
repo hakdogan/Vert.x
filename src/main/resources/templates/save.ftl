@@ -39,7 +39,7 @@
             event.preventDefault();
             var url = "/api/articles/save";
             var article = {
-                id: $("#inputTitle").val(),
+                title: $("#inputTitle").val(),
                 content: $("#inputContent").val(),
                 author: $("#inputAuthor").val()
             };

@@ -6,6 +6,7 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <title>Vert.x tutorial | Simple tutorial about Vert.x</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <style>
         body {
@@ -31,13 +32,6 @@
             <li class="nav-item ${context.saveArticleActive}">
                 <a class="nav-link" href="/api/articles/save">Save Article</a>
             </li>
-            <li class="nav-item ${context.deleteArticleActive}">
-                <a class="nav-link" href="/api/articles/remove">Delete Article</a>
-            </li>
         </ul>
-        <form class="form-inline my-2 my-lg-0">
-            <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-        </form>
     </div>
 </nav>
