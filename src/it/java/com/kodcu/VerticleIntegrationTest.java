@@ -79,7 +79,6 @@ public class VerticleIntegrationTest {
                 });
     }
 
-
     @Test
     public void testC(TestContext testContext) {
         Async async = testContext.async();
@@ -91,7 +90,6 @@ public class VerticleIntegrationTest {
                     });
                 });
     }
-
 
     @Test
     public void removeDocument(TestContext testContext) {

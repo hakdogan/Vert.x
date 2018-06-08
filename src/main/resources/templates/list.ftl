@@ -2,7 +2,7 @@
 <table id="articleTable" class="table table-striped">
     <thead>
     <tr>
-        <th scope="col">title</th>
+        <th scope="col">Title</th>
         <th scope="col">Content</th>
         <th scope="col">Author</th>
         <th scope="col">Action</th>

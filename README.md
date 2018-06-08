@@ -3,12 +3,12 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/5e7c0a2c146e4571865071dc609c87de)](https://www.codacy.com/app/hakdogan/Vert.x?utm_source=github.com&utm_medium=referral&utm_content=hakdogan/Vert.x&utm_campaign=Badge_Coverage)
 
 # Vert.x
-This repository shows how to use the `Vert.x core`, `web` and `test` module also `mongodb` and `web` client  on a web application which contains RESTful Web Services.
+This repository shows how to use the `Vert.x core`, `web` and `test` modules also `mongodb` and `web` client on a web application which contains RESTful Web Services.
 
 ## What you will learn in this repository?
 * How to deploy a Verticle
 * How to create and use an HTTP server
-* How to create a router for web service 
+* How to create a router for a web service 
 * How to use mongo client and handle CRUD operations
 * How to page render with FreeMarkerTemplateEngine
 * How to use vertx-unit for tests
@@ -25,27 +25,26 @@ private Future<Void> createServer(){
 
         final Future<Void> future = Future.future();
         final Router router = Router.router(vertx);
-
+        
         router.route("/*").handler(BodyHandler.create());
         router.get("/").handler(this::welcomePage);
         router.get("/api/articles").handler(this::getArticles);
         router.get("/api/articles/save").handler(this::getSavePage);
         router.post("/api/articles/save").handler(this::saveDocument);
-        router.get("/api/articles/remove").handler(this::getDeletePage);
         router.post("/api/articles/remove").handler(this::removeDocument);
         router.get("/api/collection/drop/:name").handler(this::dropCollection);
-
+        
         vertx.createHttpServer().requestHandler(router::accept)
-                .listen(config().getInteger("http.server.port", HTTP_PORT), result -> {
-                    if (result.succeeded()) {
-                        log.info("HTTP server running on port " + HTTP_PORT);
-                        future.complete();
-                    } else {
-                        log.error("Could not start a HTTP server", result.cause());
-                        future.fail(result.cause());
-                    }
-                });
-
+            .listen(config().getInteger("http.server.port", HTTP_PORT), result -> {
+                if (result.succeeded()) {
+                    log.info("HTTP server running on port " + HTTP_PORT);
+                    future.complete();
+                } else {
+                    log.error("Could not start a HTTP server", result.cause());
+                    future.fail(result.cause());
+                }
+            });
+        
         return future;
     }
 ```
@@ -84,13 +83,13 @@ client.post(HTTP_PORT, HOSTNAME, "/api/articles/remove")
     });
 ```
                 
-## How to compile?
+## To build
 ```
 mvn clean install
 ```
 This repository uses `docker-maven-plugin` for `integration tests` so if you don't have `Docker daemon` you should use `-Dmaven.test.skip=true` parameter with above command.
 
-## How it's run?
+## To run
 ```
 sh run.sh
 ```
