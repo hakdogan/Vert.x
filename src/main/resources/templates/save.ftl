@@ -1,5 +1,8 @@
 <#include "header.ftl">
-<div style="width: 600px; margin: 30px auto auto auto; padding: 5px;">
+<div class="shadow-sm p-3 mb-5 bg-white rounded centralizing">
+    <h4>Save Form</h4>
+</div>
+<div class="shadow-lg p-3 mb-5 bg-white rounded centralizing">
     <form>
         <div class="form-group row">
             <label for="inputTitle" class="col-sm-2 col-form-label">Title</label>

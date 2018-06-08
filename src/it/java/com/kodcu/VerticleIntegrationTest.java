@@ -41,10 +41,30 @@ public class VerticleIntegrationTest {
         Async async = testContext.async();
         vertx.createHttpClient().getNow(HTTP_PORT, HOSTNAME, "/",
                 response -> {
+                    testContext.assertTrue(response.statusMessage().equals("OK"));
+                    async.complete();
+                });
+    }
+
+    @Test
+    public void getArticlesPage(TestContext testContext) {
+        Async async = testContext.async();
+        vertx.createHttpClient().getNow(HTTP_PORT, HOSTNAME, "/api/articles",
+                response -> {
                     response.handler(responseBody -> {
-                        testContext.assertTrue(responseBody.toString().contains("Vert.x"));
+                        testContext.assertTrue(responseBody.toString().contains("title"));
                         async.complete();
                     });
+                });
+    }
+
+    @Test
+    public void getSaveArticlePage(TestContext testContext) {
+        Async async = testContext.async();
+        vertx.createHttpClient().getNow(HTTP_PORT, HOSTNAME, "/api/articles/save",
+                response -> {
+                    testContext.assertTrue(response.statusMessage().equals("OK"));
+                    async.complete();
                 });
     }
 
@@ -80,19 +100,7 @@ public class VerticleIntegrationTest {
     }
 
     @Test
-    public void testC(TestContext testContext) {
-        Async async = testContext.async();
-        vertx.createHttpClient().getNow(HTTP_PORT, HOSTNAME, "/api/articles",
-                response -> {
-                    response.handler(responseBody -> {
-                        testContext.assertTrue(responseBody.toString().contains("title"));
-                        async.complete();
-                    });
-                });
-    }
-
-    @Test
-    public void removeDocument(TestContext testContext) {
+    public void TestC(TestContext testContext) {
         Async async = testContext.async();
         WebClient client = WebClient.create(vertx);
 

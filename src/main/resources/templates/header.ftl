@@ -12,6 +12,13 @@
         body {
             margin: 5px;
         }
+
+        .centralizing {
+            width: 600px !important;
+            margin: 20px auto auto auto;
+            padding: 5px;
+        }
+
     </style>
 </head>
 <body>
